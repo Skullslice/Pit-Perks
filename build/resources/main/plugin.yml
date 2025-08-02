@@ -1,0 +1,10 @@
+main: Serialization.Init
+version: 1.0.0
+api-version: 1.21.4
+depend: [LuckPerms]
+soft-depend: [PlaceholderAPI]
+name: "pitperks"
+commands:
+  pitperks:
+    usage: /pitperks <set/remove/clear>
+    description: Manage player perk slots
