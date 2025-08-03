@@ -5,28 +5,41 @@ import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.node.Node;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.permissions.Permission;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public final class PerkManager {
     JavaPlugin plugin = Init.getProvidingPlugin(Init.class);
     LuckPerms luckPerms = LuckPermsProvider.get();
     private final File dataFolder;
     private static final Map<UUID, Map<Integer, Permission>> slotMap = new HashMap<>();
-    private final Map<UUID, LinkedHashSet<Permission>> perkMap = new HashMap<>();
-    private static final Exception PerkException = new Exception("There was an issue updating the perk most likely caused by null luckperms data", new NullPointerException());
+    private static final NamespacedKey PERK_TAG = new NamespacedKey("pitperks", "perkitem");
 
-    public PerkManager() {
+    private static volatile PerkManager instance;
 
+    public static synchronized PerkManager getInstance() {
+        if (instance == null) {
+            instance = new PerkManager();
+        }
+        return instance;
+    }
+
+    public JavaPlugin getPlugin() {
+        return this.plugin;
+    }
+
+
+    private PerkManager() {
         this.dataFolder = new File(plugin.getDataFolder(), "player data");
         try {
             if (!dataFolder.exists() && !dataFolder.mkdirs()) {
@@ -73,38 +86,38 @@ public final class PerkManager {
         }
     }
 
-    // 📥 Load perks for one player
     public void loadPerks(UUID uuid) {
         File file = new File(dataFolder, uuid.toString() + ".yml");
+        HashMap<Integer, Permission> slots = new HashMap<>();
         if (!file.exists()) return;
+
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
-        LinkedHashSet<Permission> perks = new LinkedHashSet<>();
         ConfigurationSection section = config.getConfigurationSection("perks");
+
         if (section != null) {
-            for (String key : section.getKeys(false)) {
+            List<String> keys = new ArrayList<>(section.getKeys(false));
+            for (int i = 0; i < keys.size(); i++) {
+                String key = keys.get(i);
                 String permissionName = config.getString("perks." + key);
+
                 if (permissionName != null && !permissionName.isEmpty()) {
                     Permission p = new Permission(permissionName);
-                    perks.add(p);
+                    slots.put(i + 1, p); // Keeping 1-based indexing
                 } else {
-                    // optional: log the offending key or handle it gracefully
                     Bukkit.getConsoleSender().sendMessage(Component.text(key + "' is missing a valid permission string."));
                 }
             }
         }
-        perkMap.put(uuid, perks);
+        slotMap.put(uuid, slots);
     }
 
-    // 💾 Save perks for one player
     public void savePerks(UUID uuid) {
         File file = new File(dataFolder, uuid.toString() + ".yml");
         YamlConfiguration config = new YamlConfiguration();
-        LinkedHashSet<Permission> perks = perkMap.get(uuid);
-        if (perks != null) {
-            int index = 0;
-            for (Permission p : perks) {
-                config.set("perks." + index, p);
-                index++;
+        Map<Integer, Permission> slots = slotMap.get(uuid);
+        if (slots != null) {
+            for (int i = 0; i < slots.size(); i++) {
+                config.set("perks." + (i + 1), slots.get(i));
             }
         }
         try {
@@ -114,7 +127,6 @@ public final class PerkManager {
         }
     }
 
-    // 🔄 Load perks for all players
     public void loadAllPerks() {
         File[] files = dataFolder.listFiles((dir, name) -> name.endsWith(".yml"));
         if (files != null) {
@@ -128,9 +140,8 @@ public final class PerkManager {
         }
     }
 
-    // 💾 Save perks for all players
     public void saveAllPerks() {
-        for (UUID uuid : perkMap.keySet()) {
+        for (UUID uuid : slotMap.keySet()) {
             savePerks(uuid);
         }
     }
@@ -138,6 +149,7 @@ public final class PerkManager {
     public void assignPerkToSlot(UUID uuid, int slot, Permission perk) {
         slotMap.computeIfAbsent(uuid, u -> new HashMap<>()).put(slot, perk);
     }
+
     public static Permission getPermissionFromSlot(UUID uuid, int slot) {
         Map<Integer, Permission> slots = slotMap.get(uuid);
         if (slots != null) {
@@ -146,8 +158,19 @@ public final class PerkManager {
         return null;
     }
 
-    public void strengthPerkTaskTimer() {
-
+    public boolean addPerkTag(@NotNull ItemStack itemStack) {
+        if (!itemStack.getItemMeta().getPersistentDataContainer().has(PERK_TAG)) {
+            itemStack.getItemMeta().getPersistentDataContainer().set(PERK_TAG, PersistentDataType.STRING, "true");
+            return true;
+        }
+        return false;
+    }
+    public boolean removePerkTag(@NotNull ItemStack itemStack) {
+        if (itemStack.getItemMeta().getPersistentDataContainer().has(PERK_TAG)) {
+            itemStack.getItemMeta().getPersistentDataContainer().remove(PERK_TAG);
+            return true;
+        }
+        return false;
     }
 
 }

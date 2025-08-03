@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 public class PerkCommand implements CommandExecutor, TabCompleter {
 
     private final LuckPerms luckPerms = LuckPermsProvider.get();
-    private final PerkManager pm = new PerkManager();
+    private final PerkManager pm = PerkManager.getInstance();
 
     /**
      * @param args arguments passed to the method.
@@ -38,10 +38,14 @@ public class PerkCommand implements CommandExecutor, TabCompleter {
             commandSender.sendMessage("No Access");
             return false;
         }
+        if (args.length < 2) {
+            commandSender.sendMessage("Usage: /pitperks " + " <set> <remove> <clear> " + "<args>");
+            return false;
+        }
+
         if (args[0].equalsIgnoreCase("clear")) {
             boolean silent = Arrays.asList(args).contains("-s");
             OfflinePlayer player = Bukkit.getOfflinePlayer(args[1]);
-
 
             // Clear out the luckperms permissions
             try {
@@ -100,10 +104,39 @@ public class PerkCommand implements CommandExecutor, TabCompleter {
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String s, @NotNull String[] strings) {
         if (!sender.hasPermission(Permissions.ADMIN)) return Collections.emptyList();
         switch (strings.length) {
-            case 1:
-
+            case 1: {
+                return List.of("set", "remove", "clear", "-s (silent)");
+            }
+            case 2: {
+                switch (strings[0].toLowerCase()) {
+                    case "set", "remove" -> {
+                        return List.of("1", "2", "3", "4");
+                    }
+                    case "clear" -> {
+                        return Bukkit.getOnlinePlayers().stream()
+                                .map(Player::getName)
+                                .collect(Collectors.toList());
+                    }
+                }
+            }
+            case 3: {
+                switch (strings[0].toLowerCase()) {
+                    case "set", "remove" -> {
+                        return Bukkit.getOnlinePlayers().stream()
+                                .map(Player::getName)
+                                .collect(Collectors.toList());
+                    }
+                }
+            }
+            case 4: {
+                switch (strings[0].toLowerCase()) {
+                    case "set", "remove" -> {
+                        return getPluginPermissions("perks.");
+                    }
+                }
+            }
         }
-        return List.of();
+        return Collections.emptyList();
     }
 
     public List<String> getPluginPermissions(String prefix) {

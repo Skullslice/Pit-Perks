@@ -1,5 +1,6 @@
 package onEvent;
 
+import Serialization.PerkManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.NamespacedKey;
@@ -17,9 +18,10 @@ public class ItemDropManager implements Listener {
     private final Map<UUID, Long> dropAttempts = new HashMap<>();
     private final long DROP_WINDOW_MS = 500; // 3 seconds
     NamespacedKey PERK_TAG = new NamespacedKey("pit_perks", "perkitem");
+    PerkManager pm = PerkManager.getInstance();
 
     @EventHandler
-    public void onNormalItemDrop(PlayerDropItemEvent event) {
+    public void onItemDrop(PlayerDropItemEvent event) {
 
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
@@ -27,8 +29,13 @@ public class ItemDropManager implements Listener {
         long now = System.currentTimeMillis();
         long lastAttempt = dropAttempts.getOrDefault(uuid, 0L);
 
-        if (now - lastAttempt <= DROP_WINDOW_MS) {
-            // Confirmed deletion
+        // First, check if they are trying to drop a perk item.
+        if (droppedItem.getPersistentDataContainer().has(PERK_TAG)) {
+            event.getPlayer().sendMessage(Component.text("You cannot drop perk items.").color(NamedTextColor.RED));
+            event.setCancelled(true);
+        }
+        else if (now - lastAttempt <= DROP_WINDOW_MS) {
+            // Confirmed item drop.
             player.sendMessage(Component.text("you dropped your item.").color(NamedTextColor.RED));
             dropAttempts.remove(uuid);
         } else {
@@ -38,19 +45,5 @@ public class ItemDropManager implements Listener {
             player.sendMessage(Component.text("Are you sure you want to drop the item?").color(NamedTextColor.RED));
             player.sendMessage(Component.text("Drop again to confirm.").color(NamedTextColor.RED));
         }
-    }
-
-
-    @EventHandler
-    public void onPerkItemDrop(PlayerDropItemEvent drop) {
-
-        ItemStack dropped = drop.getItemDrop().getItemStack();
-
-        // Check if the dropped item is a perk item, and then delete it.
-        if (dropped.getPersistentDataContainer().has(PERK_TAG)) {
-            drop.getPlayer().sendMessage(Component.text("You cannot drop perk items.").color(NamedTextColor.RED));
-            drop.setCancelled(true);
-        }
-
     }
 }
