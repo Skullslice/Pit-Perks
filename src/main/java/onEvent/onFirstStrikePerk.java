@@ -14,7 +14,6 @@ import java.util.UUID;
 
 public class onFirstStrikePerk implements Listener {
     private final HashMap<UUID, Set<UUID>> strikeMap = new HashMap<>();
-    //private final Set<UUID> hitSet = new HashSet<>();
 
     @EventHandler
     public void onDamage(EntityDamageByEntityEvent damage) {

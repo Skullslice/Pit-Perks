@@ -23,10 +23,10 @@ public class Init extends JavaPlugin implements Serializable {
 
         lp = LuckPermsProvider.get();
 
-        perkManager = new PerkManager();
-        PerkCommand perkCommand = new PerkCommand();
-
+        perkManager = PerkManager.getInstance();
         perkManager.loadAllPerks();
+
+        PerkCommand perkCommand = new PerkCommand();
 
         PermissionChange.listen(lp, this);
 

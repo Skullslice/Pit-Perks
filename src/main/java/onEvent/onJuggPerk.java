@@ -1,5 +1,6 @@
 package onEvent;
 
+import Serialization.PerkManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import onCommand.Permissions;
@@ -19,7 +20,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 public class onJuggPerk implements Listener {
 
-    NamespacedKey PERK_TAG = new NamespacedKey("pit_perks", "perkitem");
+    PerkManager pm = PerkManager.getInstance();
 
     @EventHandler
     public void onJugg(PlayerJoinEvent join) {
@@ -51,10 +52,10 @@ public class onJuggPerk implements Listener {
         helmetMeta.setUnbreakable(true);
         helmetMeta.displayName(Component.text("Juggernaut Helmet").color(NamedTextColor.LIGHT_PURPLE));
         helmetMeta.addAttributeModifier(Attribute.GRAVITY, gravityModifier);
-        helmetMeta.getPersistentDataContainer().set(PERK_TAG, PersistentDataType.BYTE, (byte) 1);
 
         //set the meta and item
         helmet.setItemMeta(helmetMeta);
+        pm.addPerkTag(helmet);
         player.getInventory().setItem(39, helmet);
     }
 }
